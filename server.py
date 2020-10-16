@@ -1,9 +1,10 @@
 import socket
 from threading import Thread
 import argparse
+import sys
 
 HEAD_SIZE = 10
-IP = "0.0.0.0"
+IP = "localhost"
 PORT = ""
 
 parser = argparse.ArgumentParser(description="PChat Server")
@@ -14,8 +15,10 @@ try:
     server_sckt.bind((IP, PORT))
 except OSError as e:
     print("Connection error: "+str(e.strerror))
+    sys.exit(0)
 except Exception as e:
     print("General error: "+str(e))
+    sys.exit(0)
 server_sckt.listen()
 clients = {}
 

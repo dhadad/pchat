@@ -42,7 +42,6 @@ def login(event=None):
     gets user input from text boxes.
     if not empty: establishes connection & destroys the log in window.
     """
-    con_err["text"] = ""
     ip = ip_box.get()
     try:
         socket.inet_aton(ip)
@@ -66,11 +65,13 @@ def login(event=None):
 def connect(ip, port, username):
     # attempt to connect to the chat room server
     try:
+        client_sckt.settimeout(5)
         client_sckt.connect((ip, port))
-    except ConnectionRefusedError:
-        con_err["text"] = "Can't connect to server."
-        print("Can't connect to server.")
+    except socket.error as e:
+        print("Connection error: "+str(e))
+        error_popup("Connection error: "+str(e))
         return
+    client_sckt.settimeout(None)
     client_sckt.send(bytes(f"{len(username):<{HEAD_SIZE}}{username}", "utf-8"))
     login_canvas.destroy()
     # if successful, start thread for listening to new messages from the server:
@@ -117,6 +118,22 @@ def close_main_chat():
     my_msg.set("/q")
     send()
 
+def error_popup(str):
+    err_canvas = tkinter.Toplevel(class_="PChat")
+    err_canvas.title("PChat")
+    err_canvas.iconphoto(True, tkinter.Image("photo", file=real_path('favicon.png')))
+    err_canvas.lift()
+    err_canvas.attributes("-topmost", True)
+    err_canvas.resizable(False, False)
+    label = tkinter.Label(err_canvas, text=str)
+    label.grid(row=0, column=0)
+    ip_box["state"] = "disabled"
+    username_box["state"] = "disabled"
+    port_box["state"] = "disabled"
+    login_button["state"] = "disabled"
+    err_canvas.geometry(f"+{int(canvas.winfo_screenwidth() / 2 - err_canvas.winfo_x() / 2)}+"
+                          f"{int(canvas.winfo_screenheight() / 2 - err_canvas.winfo_y() / 2)}")
+    err_canvas.protocol("WM_DELETE_WINDOW", lambda: canvas.destroy())
 
 # main chat window configuration:
 canvas = tkinter.Tk(className="PChat")
@@ -152,8 +169,8 @@ send_button.grid(row=1, column=1, pady=10, sticky="ew")
 
 
 # login in window configuration:
-login_canvas = tkinter.Toplevel(class_="Pchat")
-login_canvas.title("Pchat")
+login_canvas = tkinter.Toplevel(class_="PChat")
+login_canvas.title("PChat")
 login_canvas.iconphoto(True, tkinter.Image("photo", file=real_path('favicon.png')))
 login_canvas.lift()
 login_canvas.attributes("-topmost", True)  # push the login window to the front
@@ -163,12 +180,14 @@ ip_label = tkinter.Label(login_canvas, text="Server IP Address: ")
 ip_label.grid(row=0, column=0)
 ip_box = tkinter.Entry(login_canvas)
 ip_box.grid(row=0, column=1)
+ip_box.bind("<Return>", login)
 label_no_ip = tkinter.Label(login_canvas, text="")
 label_no_ip.grid(row=0, column=2)
 port_label = tkinter.Label(login_canvas, text="Port: ")
 port_label.grid(row=1, column=0)
 port_box = tkinter.Entry(login_canvas)
 port_box.grid(row=1, column=1)
+port_box.bind("<Return>", login)
 label_no_port = tkinter.Label(login_canvas, text="")
 label_no_port.grid(row=1, column=2)
 username_label = tkinter.Label(login_canvas, text="Enter your user name: ")
@@ -180,17 +199,11 @@ label_no_username = tkinter.Label(login_canvas, text="")
 label_no_username.grid(row=2, column=2)
 login_button = tkinter.Button(login_canvas, width=7, text="Log in", command=login)
 login_button.grid(row=3, column=1)
-con_err = tkinter.Label(login_canvas, text="")
-con_err.grid(row=4, column=1)
-login_canvas.geometry(f"+{int(login_canvas.winfo_screenwidth()/2-login_canvas.winfo_x()/2)}+"
-                      f"{int(login_canvas.winfo_screenheight()/2-login_canvas.winfo_y()/2)}")
-
-
-client_sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# exit before log in
+login_canvas.geometry(f"+{int(canvas.winfo_screenwidth()/2-login_canvas.winfo_x()/2)}+"
+                      f"{int(canvas.winfo_screenheight()/2-login_canvas.winfo_y()/2)}")
 login_canvas.protocol("WM_DELETE_WINDOW", lambda: canvas.destroy())
 
-
+client_sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
     tkinter.mainloop()  # main thread
 except tkinter.TclError:
