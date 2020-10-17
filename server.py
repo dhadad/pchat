@@ -41,7 +41,6 @@ def accept_clients():
         clients[new_client_sckt] = username
         print(f"Accepted new connection from {new_client_addr[0]}:{new_client_addr[1]} username: {username}")
         client_thread = Thread(target=handle_client, args=(new_client_sckt,))
-        client_thread.setDaemon(True)
         client_thread.start()
 
 
