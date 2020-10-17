@@ -5,9 +5,9 @@ import sys
 
 HEAD_SIZE = 10
 IP = "localhost"
-PORT = ""
 
-parser = argparse.ArgumentParser(description="PChat Server")
+parser = argparse.ArgumentParser(description="PChat Server", usage='python3 server.py [options]',
+                                 epilog="Press ctrl+c to close server.")
 parser.add_argument("-p", "--port", help="Port to be used by the server. Expects one argument", type=int, default=1234)
 PORT = parser.parse_args().port
 server_sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,7 +40,9 @@ def accept_clients():
         username = init_data["data"].decode("utf-8")
         clients[new_client_sckt] = username
         print(f"Accepted new connection from {new_client_addr[0]}:{new_client_addr[1]} username: {username}")
-        Thread(target=handle_client, args=(new_client_sckt,)).start()
+        client_thread = Thread(target=handle_client, args=(new_client_sckt,))
+        client_thread.setDaemon(True)
+        client_thread.start()
 
 
 def handle_client(client_sckt):
@@ -63,7 +65,12 @@ def send_all(msg):
         sckt.send(bytes(f"{len(msg):<{HEAD_SIZE}}{msg}", "utf-8"))
 
 
-thread = Thread(target=accept_clients)
-thread.start()
-thread.join()
-server_sckt.close()
+try:
+    thread = Thread(target=accept_clients)
+    thread.setDaemon(True)
+    thread.start()
+    thread.join()
+    server_sckt.close()
+except KeyboardInterrupt:
+    print("You closed the server.")
+    server_sckt.close()
